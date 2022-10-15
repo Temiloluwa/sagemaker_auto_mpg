@@ -60,6 +60,8 @@ if __name__=='__main__':
     parser.add_argument('--train', type=str, default=os.environ['SM_CHANNEL_TRAIN'])
     # location in container: '/opt/ml/input/data/test'
     parser.add_argument('--test', type=str, default=os.environ['SM_CHANNEL_TEST'])
+    # model filename
+    parser.add_argument('--model-filename', type=str, default="model.joblib")
     
     # Hyperparameters are described here.
     parser.add_argument('--n_estimators', type=int, default=5)
@@ -94,5 +96,5 @@ if __name__=='__main__':
     logging.info(f"Train RMSE={train_rmse}; Test RMSE={test_rmse};")
     
     # Save the Model
-    joblib.dump(model, os.path.join(args.model_dir, "model.joblib"))
+    joblib.dump(model, os.path.join(args.model_dir, args.model_filename))
     

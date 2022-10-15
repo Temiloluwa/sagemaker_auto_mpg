@@ -3,6 +3,7 @@ import joblib
 import argparse
 import numpy as np
 import pandas as pd
+import tarfile
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.compose import make_column_selector, ColumnTransformer
@@ -68,6 +69,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--train-filename', type=str, default='train.csv')
     parser.add_argument('--test-filename', type=str, default='test.csv')
+    parser.add_argument('--model-filename', type=str, default='pl.tar.gz')
+    parser.add_argument('--train-feats-filename', type=str, default='train_feats.npy')
+    parser.add_argument('--test-feats-filename', type=str, default='test_feats.npy')
+    
     args = parser.parse_args()
 
     # one hot categorical features
@@ -95,12 +100,16 @@ if __name__ == '__main__':
     # save features in output path with the container
     train_features = np.concatenate([train_target, train_features], axis=1)
     test_features = np.concatenate([test_target, test_features], axis=1)
-    train_features_save_path = os.path.join(CONTAINER_TRAIN_OUTPUT_PATH, "train_feats.npy")
-    test_features_save_path = os.path.join(CONTAINER_TEST_OUTPUT_PATH, "test_feats.npy")
+    train_features_save_path = os.path.join(CONTAINER_TRAIN_OUTPUT_PATH, args.train_feats_filename)
+    test_features_save_path = os.path.join(CONTAINER_TEST_OUTPUT_PATH, args.test_feats_filename)
     save_numpy(train_features, train_features_save_path)
     save_numpy(test_features, test_features_save_path)
     
     # save preprocessor model
-    model_save_path = os.path.join(CONTAINER_OUTPUT_PATH, "pl.joblib")
-    joblib.dump(pl, model_save_path)
+    model_save_path = os.path.join(CONTAINER_OUTPUT_PATH, args.model_filename)
+    joblib.dump(pl, "pl.joblib")
+    
+    # save model should be a tarfile so it can be loaded in the future
+    with tarfile.open(model_save_path, "w:gz") as tar_handle:
+        tar_handle.add("pl.joblib")
     
