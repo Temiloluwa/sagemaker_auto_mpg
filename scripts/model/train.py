@@ -11,23 +11,9 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 # configure logger to standard output
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.StreamHandler(sys.stdout))
-
-# configure metrics logger
-METRICS_DIR = os.environ.get("SAGEMAKER_METRICS_DIRECTORY", ".")
-logger_metrics = logging.FileHandler(os.path.join(METRICS_DIR, "metrics.json"))
-formatter = logging.Formatter(
-                    "{'time':'%(asctime)s', 'name': '%(name)s', \
-                    'level': '%(levelname)s', 'message': '%(message)s'}", style="%")
-logger_metrics.setFormatter(formatter)
-logger.addHandler(logger_metrics)
-
-     
-def model_fn(model_dir):
-    """Deserialize fitted model
-    """
-    model = joblib.load(os.path.join(model_dir, "model.joblib"))
-    return model
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(logging.Formatter("%(asctime)s %(name)-12s %(levelname)-8s %(message)s"))
+logger.addHandler(stream_handler)
 
 
 def get_metrics(train_y_true, train_y_pred, test_y_true, test_y_pred):
@@ -64,10 +50,10 @@ if __name__=='__main__':
     parser.add_argument('--model-filename', type=str, default="model.joblib")
     
     # Hyperparameters are described here.
-    parser.add_argument('--n_estimators', type=int, default=5)
+    parser.add_argument('--n_estimators', type=int)
     args = parser.parse_args()
     
-    logging.debug(f"Number of Estimators: {args.n_estimators}")
+    logger.debug(f"Number of Estimators: {args.n_estimators}")
     
     # Load numpy features saved in S3 
     # Targets are the first column, features are other columns
@@ -82,7 +68,7 @@ if __name__=='__main__':
     # Train random forest model
     model = RandomForestRegressor(max_depth=args.n_estimators, random_state=0)
     model.fit(train_feats, train_target)
-    logging.info("Model Trained ")
+    logger.info("Model Trained ")
     
     train_pred = model.predict(train_feats)
     test_pred = model.predict(test_feats)
@@ -91,9 +77,9 @@ if __name__=='__main__':
     train_mae, test_mae, train_mse, test_mse, train_rmse, test_rmse = \
         get_metrics(train_target, train_pred, test_target, test_pred)
     
-    logging.info(f"Train MAE={train_mae};  Test MAE={test_mae};")
-    logging.info(f"Train MSE={train_mse};  Test MSE={test_mse};")
-    logging.info(f"Train RMSE={train_rmse}; Test RMSE={test_rmse};")
+    logger.info(f"train_mae={train_mae};  test_mae={test_mae};")
+    logger.info(f"train_mse={train_mse};  test_mse={test_mse};")
+    logger.info(f"train_rmse={train_rmse}; test_rmse={test_rmse};")
     
     # Save the Model
     joblib.dump(model, os.path.join(args.model_dir, args.model_filename))
