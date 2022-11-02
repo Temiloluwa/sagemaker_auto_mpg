@@ -1,6 +1,6 @@
 # A Practical Introduction to Amazon SageMaker Python SDK
 
-This repo provides a quick introduction to developing ML models in Sagemaker with the Sagemaker Python SDK.
+This repo provides a quick introduction to developing ML models with the Sagemaker Python SDK.
 
 ## Solution
 This is a regression task on the [AutoMPG](https://archive.ics.uci.edu/ml/datasets/auto+mpg) dataset from the UCI Machine Learning repository.
@@ -14,4 +14,4 @@ The solution developed covers the following Sagemaker Features
 
 ## Blog
 
-A [blog post](Blog.md) is included in this repo that explains the solution.
+A [blog post](Blog.md) is included that explains the solution.
