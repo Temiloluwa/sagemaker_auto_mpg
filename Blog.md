@@ -3,7 +3,7 @@
 As a Machine Learning Engineer working with Sagemaker, I use the Amazon SageMaker Python SDK mostly in conjuction with the AWS CLI V2 and Boto3.
 Although the SDK should offer a faster development experience over the others, I found a learning curve exists to hit the ground running with it.
 This post walks through a simple regression task in a bid to showcase some of the common APIs in the SDK.
-I also highlight "gotchas" I encountered while developing this solution.
+I also highlight "gotchas" encountered while developing this solution.  
 
 ## Regression Task
 I chose a regression task I tackled some years back as budding Data scientist ([notebook link](https://github.com/Temiloluwa/ML-database-auto-mpg-prediction/blob/master/solution.ipynb)).
@@ -13,7 +13,7 @@ Given features of some vehicles, the task is to predict fuel consumption in MPG 
 2. A model training and evaluation stage
 3. An inference stage
 
-Each of these stages will produce resuable model artifacts that will be stored stored in S3. 
+Each of these stages produce resuable model artifacts that are stored in S3. 
 
 ## First Steps
 
