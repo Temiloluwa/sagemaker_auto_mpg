@@ -1,19 +1,37 @@
 # A Practical Introduction to Amazon SageMaker Python SDK
 
-As a Machine Learning Engineer working with Sagemaker, I use the Amazon SageMaker Python SDK mostly in conjuction with the AWS CLI V2 and Boto3.
-Although the SDK should offer a faster development experience over the others, I found a learning curve exists to hit the ground running with it.
-This post walks through a simple regression task in a bid to showcase some of the common APIs in the SDK.
-I also highlight "gotchas" encountered while developing this solution.  
+For my development workflow in Sagemaker, I rely majorly on the Amazon SageMaker Python SDK. The other ways of interacting with Sagemaker are the AWS CLI V2, Boto3 and the AWS web console.
+Although the SDK should offer a faster development experience, I discovered a learning curve exists to hit the ground running with it.
 
-## Regression Task
-I chose a regression task I tackled some years back as budding Data scientist ([notebook link](https://github.com/Temiloluwa/ML-database-auto-mpg-prediction/blob/master/solution.ipynb)).
-Given features of some vehicles, the task is to predict fuel consumption in MPG  ([problem definition](https://archive.ics.uci.edu/ml/datasets/auto+mpg)). Let's use Sagemaker to develop this solution with the following stages:
+This post walks through a simple regression task and showcases some important APIs in the SDK.
+I also highlight "gotchas" encountered while developing this solution. The codebase to the entire solution is found [here](https://github.com/Temiloluwa/sagemaker_auto_mpg).
+
+## Regression Task: Fuel Consumption Prediction
+I chose a regression task I tackled some years back as budding Data scientist ([notebook link](https://github.com/Temiloluwa/ML-database-auto-mpg-prediction/blob/master/solution.ipynb)): to predict fuel consumption in MPG of vehicles ([problem definition](https://archive.ics.uci.edu/ml/datasets/auto+mpg)). The solution is broken down into three stages:
 
 1. A preprocessing stage for feature engineering
 2. A model training and evaluation stage
 3. An inference stage
 
 Each of these stages produce resuable model artifacts that are stored in S3. 
+
+## Sagemaker Preprocessing and Training
+
+Two things are king in Sagemaker: S3 and containers. S3 is the recommended location for storing training data and exporting training artifacts like models. The SDK provides [Preprocessors](https://sagemaker.readthedocs.io/en/stable/amazon_sagemaker_processing.html) and [Estimators](https://sagemaker.readthedocs.io/en/stable/api/training/estimators.html) as the fundamental interfaces for data preprocessing and model training. These two APIs are simply a wrappers for Sagemaker Docker containers. A preprocessing or training job can be understood as follows:
+
+1. Transfer data from S3 into the Sagemaker Docker container
+2. Execute the training or preprocessing job in the container
+3. Export the artifact (models, preprocessed features) to S3
+
+<br>
+<figure>
+  <img src="https://sagemaker.readthedocs.io/en/stable/_images/amazon_sagemaker_processing_image1.png" alt="Sagemaker Preprocessing Container">
+  <figcaption>This image shows how data is transfered into and taken out of a preprocessing container.</figcaption>
+</figure>
+
+### Sagemaker Containers
+It is very important to get familar with the pre-configured Sagemaker container environmental variables and paths. This table shows common paths and environmental variables found in Sagemaker Training and Preprocessing containers.
+
 
 ## First Steps
 
@@ -55,7 +73,7 @@ def get_s3_path(prefix, bucket=bucket):
 
 ## Getting the Raw Data
 
-Two things are king in Sagemaker: S3 and containers (more on this later). The goal is to get the raw data to s3 to serve our preprocessing and training containers. This function downloads the raw data, splits it into train, validation and test sets and uploads them to their s3 destinations.
+This function downloads the raw data, splits it into train, validation and test sets and uploads them to their s3 destinations.
 
 ```python
 
