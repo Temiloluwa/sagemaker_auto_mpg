@@ -195,7 +195,7 @@ sklearn_processor.run(
 I create a custom preprocessor class that obeys the `.fit` and `.transform` interface by extending `BaseEstimator` and `TransformerMixin`. The preprocessor engineers the `Model Year` Feature into `Age` and makes features `Origin` and `Cylinders` categorical. It is vital that this custom transformer be stored in a separate file and imported by the main preprocessing script. The reason for this will be explained during the training step.
 
 ``` python 
-%%writefile preprocessor/custom_preprocessor.py
+%%writefile scripts/preprocessor/custom_preprocessor.py
 
 from sklearn.base import BaseEstimator, TransformerMixin
 
@@ -247,7 +247,7 @@ class CustomFeaturePreprocessor(BaseEstimator, TransformerMixin):
 The preprocessing script at `preprocessor/train.py` is executed in the Docker container to perform the feature engineering. A [Sklearn `Pipeline`](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline) model is created with the `CustomFeaturePreprocessor` as its first step, followed by a `OneHotEncoder` for categorical columns and `StandardScaler` for numerical columns.
 
 ``` python
-%%writefile preprocessor/train.py
+%%writefile scripts/preprocessor/train.py
 
 import os
 import joblib
