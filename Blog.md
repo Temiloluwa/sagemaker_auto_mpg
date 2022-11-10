@@ -244,7 +244,7 @@ class CustomFeaturePreprocessor(BaseEstimator, TransformerMixin):
 ```
 ### Preprocessor Train Script
 
-The preprocessing script at `preprocessor/train.py` is executed in the Preprocessing container to perform the feature engineering. A [Sklearn Pipeline](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline) model is created with the `CustomFeaturePreprocessor` as its first step, followed by a `OneHotEncoder` for categorical columns and `StandardScaler` for numerical columns. The first columns of the pandas dataframes are excluded during transformation because they contain the target. 
+The preprocessing script at `scripts/preprocessor/train.py` is executed in the Preprocessing container to perform the feature engineering. A [Sklearn Pipeline](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline) model is created with the `CustomFeaturePreprocessor` as its first step, followed by a `OneHotEncoder` for categorical columns and `StandardScaler` for numerical columns. The first columns of the pandas dataframes are excluded during transformation because they contain the target. 
 
 After the model is saved using joblib, it is imperative that it be compressed into a `tar` file so that it can successfully be imported during inferencing.
 
