@@ -244,7 +244,7 @@ class CustomFeaturePreprocessor(BaseEstimator, TransformerMixin):
 ```
 ### Preprocessor Train Script
 
-The preprocessing script at `preprocessor/train.py` is executed in the Docker container to perform the feature engineering. A [Sklearn `Pipeline`](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline) model is created with the `CustomFeaturePreprocessor` as its first step, followed by a `OneHotEncoder` for categorical columns and `StandardScaler` for numerical columns.
+The preprocessing script at `preprocessor/train.py` is executed in the Preprocessing container to perform the feature engineering. A [Sklearn `Pipeline`](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline) model is created with the `CustomFeaturePreprocessor` as its first step, followed by a `OneHotEncoder` for categorical columns and `StandardScaler` for numerical columns.
 
 ``` python
 %%writefile scripts/preprocessor/train.py
