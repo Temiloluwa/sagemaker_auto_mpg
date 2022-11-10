@@ -138,7 +138,7 @@ train_path, val_path, test_path = upload_raw_data_to_s3(sess)
 ## Feature Engineering
 All preprocessing scripts are stored in a directory named `scripts/preprocessor`. The preprocessing steps are implemented using Sklearn python library. These are the goals of this step:
 
-1. Preprocess the raw `.csv` data into features and export them to s3 in `.npy` format
+1. Preprocess the raw train and validation `.csv` data into features and export them to s3 in `.npy` format
 2. Save the trained preprocessing model using `joblib` and export it to s3. This saved model will serve the first stage of the inference pipeline, generating features given input test data.
 
 The Sagemaker Python SDK offers [Sklearn Preprocessors](https://sagemaker.readthedocs.io/en/stable/frameworks/sklearn/sagemaker.sklearn.html#sagemaker.sklearn.processing.SKLearnProcessor) and [PySpark Preprocessors](https://sagemaker.readthedocs.io/en/stable/api/training/processing.html#sagemaker.spark.processing.PySparkProcessor). Unfortunately, I discovered it is not possible to use custom scripts or dependencies with both. I had to use the [Framework Preprocessor](https://sagemaker.readthedocs.io/en/stable/api/training/processing.html#sagemaker.processing.FrameworkProcessor). 
