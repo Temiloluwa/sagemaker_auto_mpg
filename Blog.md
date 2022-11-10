@@ -30,7 +30,7 @@ Two things are king in Sagemaker: S3 and Docker containers. S3 is the primary lo
 </figure>
 
 ### Sagemaker Containers
-It is very important to get familar with the enviromental variables and pre-configured path locations in Sagemaker containers. More information is found at the Sagemaker Containers' [Github page](https://github.com/aws/sagemaker-containers). For example Processors receive data from S3 intp `/opt/ml/preprocessing/input` while Estimators store training data in `/opt/ml/input/data/train`. Important environmental variables include `SM_MODEL_DIR` for exporting models, `SM_NUM_CPUS`, and `SM_HP_{hyperparameter_name}` 
+It is very important to get familar with the enviromental variables and pre-configured path locations in Sagemaker containers. More information is found at the Sagemaker Containers' [Github page](https://github.com/aws/sagemaker-containers). For example Preprocessors receive data from S3 into `/opt/ml/preprocessing/input` while Estimators store training data in `/opt/ml/input/data/train`. Important environmental variables include `SM_MODEL_DIR` for exporting models, `SM_NUM_CPUS`, and `SM_HP_{hyperparameter_name}` 
 
 ## Preliminary Steps
 
