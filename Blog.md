@@ -402,7 +402,7 @@ model.fit(job_name=f"auto-mpg-{current_time}",
 
 ```
 
-I consider logging metrics is a bit complex in Sagemaker in comparision to other frameworks. These are the steps involved in capturing custom training metrics:
+I consider logging metrics a bit complex in Sagemaker in comparision to other frameworks. These are the steps involved in capturing custom training metrics:
 
 1. Create a logger that streams to standard output `(logging.StreamHandler(sys.stdout))`. The stream logs are automatically captured by AWS cloudwatch.
 2. Log metrics based on your predetermined format e.g metric-name=metric-value.
