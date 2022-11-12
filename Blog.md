@@ -37,6 +37,17 @@ It is very important to get familar with the enviromental variables and pre-conf
 Development in Sagemaker begins with initializing a Sagemaker session followed by boilerplate steps of getting the region, execution role and default bucket. I create prefixes to key s3 locations for storing data, preprocessed features and model artifacts. 
 
 ``` python
+import os
+import json
+import time
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import requests
+import boto3
+import sagemaker
+from sagemaker import get_execution_role
+from io import StringIO
 
 # initialize sagemaker session 
 sess = sagemaker.Session()
