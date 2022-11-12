@@ -324,3 +324,221 @@ if __name__ == '__main__':
 ```
 
 ## Model Training
+The python libary `smexperiments` is used for Experment tracking in Sagemaker. A Trial in sagemaker is synonymous to an MLFlow run. Depending on the complexity of the solution, a trial could cover multiple ML workflow stages for example model training and evaluation stage or just a single hyperparameter optimization step. What's important is that metrics are logged for each trial run so that they can be compared to one another. I created a trial for just the training step and attributed it to the created experiment using the `experiment_name` parameter in the `Trial.create` call. 
+
+``` python
+
+from smexperiments.experiment import Experiment
+from smexperiments.trial import Trial
+from smexperiments.trial_component import TrialComponent
+from smexperiments.tracker import Tracker
+
+current_time = datetime.now().strftime("%d-%b-%Y-%H:%M:%S").replace(":", "-")
+experiment_name = "auto-mg-experiment"
+try:
+    auto_experiment = Experiment.load(experiment_name=experiment_name)
+    print(f'experiment {experiment_name} was loaded')
+except Exception as ex:
+    if "ResourceNotFound" in str(ex):
+        auto_experiment = Experiment.create(experiment_name = experiment_name,
+                                            description = "Regression on Auto MPG dataset",
+                                            tags = [{'Key': 'Name', 'Value': f"auto-mg-experiment-{current_time}"},
+                                                    {'Key': 'MLEngineer', 'Value': f"Temiloluwa Adeoti"},
+                                                   ])
+        print(f'experiment {experiment_name} was created')
+
+from sagemaker.sklearn.estimator import SKLearn
+
+current_time = datetime.now().strftime("%d-%b-%Y-%H:%M:%S").replace(":", "-")
+n_estimators = 10
+trail_name = f"auto-mg-{n_estimators}-estimators"
+training_job_trial = Trial.create(trial_name = f"{trail_name}-{current_time}",
+                              experiment_name = auto_experiment.experiment_name,
+                              sagemaker_boto_client=sm_client,
+                              tags = [{'Key': 'Name', 'Value': f"auto-mg-{current_time}"},
+                                       {'Key': 'MLEngineer', 'Value': f"Temiloluwa Adeoti"}])
+model = SKLearn(
+    entry_point="train.py",
+    source_dir="./scripts/model",
+    framework_version="1.0-1", 
+    instance_type="ml.m5.xlarge", 
+    role=role,
+    output_path = get_s3_path(ml_model_prefix), # model output path
+    hyperparameters = {
+        "n_estimators": n_estimators
+    },
+    metric_definitions=[
+            {"Name": "train:mae", "Regex": "train_mae=(.*?);"},
+            {"Name": "test:mae", "Regex": "test_mae=(.*?);"},
+            {"Name": "train:mse", "Regex": "train_mse=(.*?);"},
+            {"Name": "test:mse", "Regex": "test_mse=(.*?);"},
+            {"Name": "train:rmse", "Regex": "train_rmse=(.*?);"},
+            {"Name": "test:rmse", "Regex": "test_rmse=(.*?);"},
+        ],
+    enable_sagemaker_metrics=True
+)
+
+
+model.fit(job_name=f"auto-mpg-{current_time}",
+          inputs = {"train": get_s3_path(pp_train_prefix), 
+                    "test": get_s3_path(pp_val_prefix)
+                   }, 
+          experiment_config={
+            "TrialName": training_job_trial.trial_name,
+            "TrialComponentDisplayName": f"Training-auto-mg-run-{current_time}",
+          },
+          logs="All")
+
+```
+
+I consider logging metrics is a bit complex in Sagemaker in comparision to other frameworks. These are the steps involved in capturing custom training metrics:
+
+1. Create a logger that streams to standard output `(logging.StreamHandler(sys.stdout))`. The stream logs are automatically captured by AWS cloudwatch.
+2. Log metrics based on your predetermined format e.g metric-name=metric-value.
+3. When creating the estimator that runs the training script, a regex pattern that matches your metric logging format must be given to the `metric_definition` parameter.
+
+The `scripts/model/train.py` is ran in a Sklearn Estimator container. Pay attention to how inputs are supplied to estimators using the `inputs` parameter and how they are assigned to trials using the `experiment_config` parameter. The script trains a `RandomForestRegressor` on the `.npy` preprocessed train features and the model is evaluated on validation features.  
+
+I will explain in what follows why I did not save the model as a tarfile.
+
+``` python
+%%writefile scripts/model/train.py
+import logging
+import sys
+import argparse
+import os
+import pandas as pd
+import numpy as np
+import joblib
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error 
+
+# configure logger to standard output
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(logging.Formatter("%(asctime)s %(name)-12s %(levelname)-8s %(message)s"))
+logger.addHandler(stream_handler)
+
+
+def get_metrics(train_y_true, train_y_pred, test_y_true, test_y_pred):
+    """
+    Return train and test metrics
+    """
+    
+    # mae
+    t_mae = mean_absolute_error(train_y_true, train_y_pred)
+    ts_mae = mean_absolute_error(test_y_true, test_y_pred)
+    
+    # mse
+    t_mse = mean_squared_error(train_y_true, train_y_pred, squared=False)
+    ts_mse = mean_squared_error(test_y_true, test_y_pred, squared=False)
+    
+    # rmse
+    t_rmse = mean_squared_error(train_y_true, train_y_pred, squared=True)
+    ts_rmse = mean_squared_error(test_y_true, test_y_pred, squared=True)
+    
+    return t_mae, ts_mae, t_mse, ts_mse, t_rmse, ts_rmse
+
+
+if __name__=='__main__':
+    parser = argparse.ArgumentParser()
+    # Sagemaker specific arguments. Defaults are set in the environment variables.
+    parser.add_argument('--output-data-dir', type=str, default=os.environ['SM_OUTPUT_DATA_DIR'])
+    # location in container: '/opt/ml/model'
+    parser.add_argument('--model-dir', type=str, default=os.environ['SM_MODEL_DIR'])
+    # location in container: '/opt/ml/input/data/train'
+    parser.add_argument('--train', type=str, default=os.environ['SM_CHANNEL_TRAIN'])
+    # location in container: '/opt/ml/input/data/test'
+    parser.add_argument('--test', type=str, default=os.environ['SM_CHANNEL_TEST'])
+    # model filename
+    parser.add_argument('--model-filename', type=str, default="model.joblib")
+    
+    # Hyperparameters are described here.
+    parser.add_argument('--n_estimators', type=int)
+    args = parser.parse_args()
+    
+    logger.debug(f"Number of Estimators: {args.n_estimators}")
+    
+    # Load numpy features saved in S3 
+    # Targets are the first column, features are other columns
+    train_data = np.load(os.path.join(args.train, "train_feats.npy"))
+    train_feats = train_data[:, 1:]
+    train_target = train_data[:, 0]
+    
+    test_data = np.load(os.path.join(args.test, "test_feats.npy"))
+    test_feats = test_data[:, 1:]
+    test_target = test_data[:, 0]
+    
+    # Train random forest model
+    model = RandomForestRegressor(max_depth=args.n_estimators, random_state=0)
+    model.fit(train_feats, train_target)
+    logger.info("Model Trained ")
+    
+    train_pred = model.predict(train_feats)
+    test_pred = model.predict(test_feats)
+    
+    # Evaluate Model
+    train_mae, test_mae, train_mse, test_mse, train_rmse, test_rmse = \
+        get_metrics(train_target, train_pred, test_target, test_pred)
+    
+    logger.info(f"train_mae={train_mae};  test_mae={test_mae};")
+    logger.info(f"train_mse={train_mse};  test_mse={test_mse};")
+    logger.info(f"train_rmse={train_rmse}; test_rmse={test_rmse};")
+    
+    # Save the Model
+    joblib.dump(model, os.path.join(args.model_dir, args.model_filename))
+    
+```
+
+## Model Inferencing
+
+We have seen that Preprocessors for preprocessing and Estimators are for training. Sagemaker provides the [`Model`](https://sagemaker.readthedocs.io/en/stable/api/inference/model.html) api for deployment to an endpoint and the [Predictor](https://sagemaker.readthedocs.io/en/stable/api/inference/predictors.html) api for making predictions with the endpoint.
+
+Since we have two models, preprocessor and regressor models, we require a pipeline model to chain both and make a deployment. I created a `SKLearnModel` for the preprocessor and supplied as arguments the path to the saved tar model in S3, the inference script as the entry point and the custom_preprocessor.py as the dependency.
+
+ I needed the `CustomFeaturePreprocessor` in a seperate file for import during inferencing. Writing the same class in both the train and inference scripts did not work. This was the error I encountered:
+<code>Can't get attribute 'CustomFeaturePreprocessor' on <module '__main__' from '/miniconda3/bin/gunicorn'> </code>. This is a common problem faced during model deployment. You can read more on this type of problem at this [Stackoverflow post](https://stackoverflow.com/questions/49621169/joblib-load-main-attributeerror)
+
+I did not save the regressor as a tarfile because a Sagemaker Model can be created from an Estimator with the `.create_model` method.
+
+
+``` python
+from sagemaker.sklearn.model import SKLearnModel
+from sagemaker.pipeline import PipelineModel
+from sagemaker.serializers import CSVSerializer
+from datetime import datetime
+
+current_time = datetime.now().strftime("%d-%b-%Y-%H:%M:%S").replace(":", "-")
+model_name = f"inference-pipeline-{current_time}"
+endpoint_name = f"inference-pipeline-{current_time}"
+pp_model_path = get_s3_path(pp_model_prefix) + "/model.tar.gz"
+
+print("preprocessor model path ", pp_model_path)
+
+# preprocessor
+sklearn_processor_model = SKLearnModel(
+                             model_data=pp_model_path,
+                             role=role,
+                             entry_point="scripts/preprocessor/inference.py",
+                             dependencies=["scripts/preprocessor/custom_preprocessor.py"],
+                             framework_version="1.0-1",
+                             sagemaker_session=sess)
+
+# regression model
+reg_model = model.create_model(entry_point="inference.py",
+                               source_dir="./scripts/model")
+    
+inference_pipeline = PipelineModel(
+    name=model_name, role=role, models=[sklearn_processor_model, reg_model],
+    sagemaker_session=sess
+)
+
+predictor = inference_pipeline.deploy(initial_instance_count=1, 
+                                      instance_type="ml.c4.xlarge", 
+                                      endpoint_name=endpoint_name,
+                                      serializer=CSVSerializer() # to ensure input is csv
+                                     )
+```
+
+### Sagemaker Inference Script Structure
