@@ -1,8 +1,8 @@
 # A Practical Introduction to Amazon SageMaker Python SDK
 
 ## Introduction
-On the 12th of October, 2022, I presented a Knowledge Share to my colleagues at Machine Learning Reply GmBH titled, "Developing Solutions with Sagemaker". Knowledge Sharing is a tradition we observe weekly at Learning Reply GmBH which helps us as consultants to have a broad range of skill sets. The presentation was an overview on Sagemaker JumpStart, Sagemaker Sagemaker Algorithms, Development Environments in Sagemaker and their underlying architecture.
-This post is follow-up post to dive a bit deeper into interacting with Sagemaker with the python SDK.
+On the 12th of October, 2022, I presented a Knowledge Share to my colleagues at Machine Learning Reply GmBH titled, ["Developing Solutions with Sagemaker"](https://www.slideshare.net/TemiReply/mldevelopmentwithsagemakerpptx). Knowledge Sharing is a tradition we observe weekly at Machine Learning Reply GmBH that helps us as consultants to develop a broad range of skill sets. The presentation was an overview on Sagemaker JumpStart, Sagemaker Sagemaker Algorithms, Development Environments in Sagemaker and their underlying architecture.
+This is a follow-up blog post to dive a bit deeper into interacting with Sagemaker with the python SDK.
 
 ## AWS Sagemaker Python SDK
 
