@@ -545,6 +545,8 @@ Repeating the `CustomFeaturePreprocessor` in both the preprocessor model trainin
 
 I did not save the regressor as a tarfile because I chose not to import the regressor model from S3. Instead, I created a Sagemaker Model directly from the trained Estimator with the `.create_model` method (another way to create Models).
 
+When the two models are provided in a list in the pipeline model definition as shown below, Sagemaker automatically serves the output of the preprocessor model as input to the regressor model. I deployed the model `ml.c4.xlarge` instance and used a [`CSVSerializer`](https://sagemaker.readthedocs.io/en/stable/api/inference/serializers.html) for input requests. 
+
 
 ``` python
 from sagemaker.sklearn.model import SKLearnModel
@@ -571,12 +573,14 @@ sklearn_processor_model = SKLearnModel(
 # regression model
 reg_model = model.create_model(entry_point="inference.py",
                                source_dir="./scripts/model")
-    
+
+# create a pipeline model with the two models    
 inference_pipeline = PipelineModel(
     name=model_name, role=role, models=[sklearn_processor_model, reg_model],
     sagemaker_session=sess
 )
 
+# deploy model
 predictor = inference_pipeline.deploy(initial_instance_count=1, 
                                       instance_type="ml.c4.xlarge", 
                                       endpoint_name=endpoint_name,
@@ -597,7 +601,7 @@ Our Scikit-learn model server already has default implementations of these funct
 
 #### Preprocessor Inference Script
 
-In my inference script for the preprocessor, I imported the custom dependencies. The `model_fn` loads the `.joblib` model, while the `input_fn` ensures the request is in `text` or `csv` format and transforms the data into a `Pandas dataframe`. By default, the `predict_fn` should make a `.predict` call on the model, but since the preprocessor is a transform, the `.transform` method is used. 
+In my inference script for the preprocessor, I imported the custom dependencies to avoid the error earlier mentioned. The `model_fn` loads the `.joblib` model, while the `input_fn` ensures the request is in `text` or `csv` format and transforms the data into a `Pandas dataframe`. By default, the `predict_fn` should make a `.predict` call on the model, but since the preprocessor is a transform, the `.transform` method is used. 
 
 ``` python
 %%writefile scripts/preprocessor/inference.py
@@ -639,3 +643,66 @@ def model_fn(model_dir):
 ```
 
 #### Regressor Inference Script
+
+The regressor uses a much simpler inference script. Here the `output_fn` is implemented to provide a JSON response to the input request.
+
+``` python
+%%writefile scripts/model/inference.py
+import sys
+import os
+import logging
+import json
+import joblib
+from sagemaker_containers.beta.framework import worker
+
+# configure logger to standard output
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(logging.Formatter("%(asctime)s %(name)-12s %(levelname)-8s %(message)s"))
+logger.addHandler(stream_handler)
+
+def model_fn(model_dir):
+    """Deserialize fitted model
+    """
+    model = joblib.load(os.path.join(model_dir, "model.joblib"))
+    return model
+
+
+def output_fn(prediction, accept):
+    """
+    Preprocess numpy array to return JSON output
+    """
+    pred = []
+    for i, row in enumerate(prediction.tolist()):
+        pred.append({"id": i, "prediction": row})
+
+    return worker.Response(json.dumps(pred))
+```
+
+### Making Predictions
+
+All the major work is done and making predictions is a very simple process with the [`Predictor API`](https://sagemaker.readthedocs.io/en/stable/api/inference/predictors.html). 
+
+In the code snippet below, I download raw test set from S3 and store each line of the csv,expect the header, as a string in the list called `test_data`. After instantiating the `Predictor` with the `endpoint name` and `sagemaker session`, I make predictions by calling the  `.predict` method on the `predictor` instance.
+``` python
+from pprint import pprint
+
+# download raw test data and read text files
+sess.download_data(path=".", bucket=bucket, key_prefix=raw_test_prefix)
+with open("test.csv", "r") as f:
+    test_data = f.readlines()[1:]
+
+# make predictions with the deployed endpoint
+from sagemaker.predictor import Predictor
+from sagemaker.deserializers import JSONLinesDeserializer
+
+predictor = Predictor(
+    endpoint_name=endpoint_name, sagemaker_session=sess, serializer=CSVSerializer(), deserializer=JSONLinesDeserializer()
+)
+
+num_of_samples = 1
+response = predictor.predict(test_data[:num_of_samples])
+```
+
+## Conclusion
