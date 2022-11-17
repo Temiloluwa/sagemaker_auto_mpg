@@ -536,14 +536,14 @@ if __name__=='__main__':
 
 ## Stage 3: Model Inferencing
 
-We have seen that Preprocessors are for preprocessing and Estimators for training. Sagemaker provides the [Model](https://sagemaker.readthedocs.io/en/stable/api/inference/model.html) api for deployment to an endpoint and the [Predictor](https://sagemaker.readthedocs.io/en/stable/api/inference/predictors.html) api for making predictions with the endpoint.
+Sagemaker provides the [Model](https://sagemaker.readthedocs.io/en/stable/api/inference/model.html) API for model deployement to an endpoint and the [Predictor](https://sagemaker.readthedocs.io/en/stable/api/inference/predictors.html) API for making predictions with the endpoint. Since we have two models, the preprocessor and regressor models, we require a Sagemaker pipeline model to chain both and make a deployment. 
 
-Since we have two models, preprocessor and regressor models, we require a pipeline model to chain both and make a deployment. I created a `SKLearnModel` for the preprocessor and supplied as arguments the path to the saved tar model in S3, the inference script as the entry point and the custom_preprocessor.py as the dependency.
+I selected the `SKLearnModel` (Model with Sklearn dependencies pre-installed) for the preprocessor. To prepare the Model, I supplied as arguments paths to the saved tar model in S3, the inference script which is its entry point and the `custom_preprocessor.py`.
 
- I needed the `CustomFeaturePreprocessor` in a seperate file for import during inferencing. Writing the same class in both the train and inference scripts did not work. This was the error I encountered:
-<code>Can't get attribute 'CustomFeaturePreprocessor' on <module '__main__' from '/miniconda3/bin/gunicorn'> </code>. This is a common problem faced during model deployment. You can read more on this type of problem at this [Stackoverflow post](https://stackoverflow.com/questions/49621169/joblib-load-main-attributeerror)
+Repeating the `CustomFeaturePreprocessor` in both the preprocessor model training (`scripts/preprocessor/train.py`) and inference (`scripts/preprocessor/inference.py`) scripts did not work. I needed to import the class from a seperate file (`scripts/preprocessor/custom_preprocessor.py.py`) for inferencing.  This was the error I encountered:
+<code>Can't get attribute 'CustomFeaturePreprocessor' on <module '__main__' from '/miniconda3/bin/gunicorn'> </code>. It is a common problem faced during model deployment. You can read more on this type of problem at this [Stackoverflow post](https://stackoverflow.com/questions/49621169/joblib-load-main-attributeerror)
 
-I did not save the regressor as a tarfile because a Sagemaker Model can be created from an Estimator with the `.create_model` method.
+I did not save the regressor as a tarfile because I chose not to import the regressor model from S3. Instead, I created a Sagemaker Model directly from the trained Estimator with the `.create_model` method (another way to create Models).
 
 
 ``` python
