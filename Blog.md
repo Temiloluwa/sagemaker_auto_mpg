@@ -1,19 +1,18 @@
 # A Practical Introduction to Amazon SageMaker Python SDK
 
 ## Introduction
-On the 12th of October, 2022, I presented a Knowledge Share to my colleagues at Machine Learning Reply GmBH titled, ["Developing Solutions with Sagemaker"](https://www.slideshare.net/TemiReply/mldevelopmentwithsagemakerpptx). Knowledge Sharing is a tradition we observe weekly at Machine Learning Reply GmBH that helps us as consultants to develop a broad range of skill sets. The presentation was an overview on Sagemaker JumpStart, Sagemaker Sagemaker Algorithms, Development Environments in Sagemaker and their underlying architecture.
-This is a follow-up blog post to dive a bit deeper into interacting with Sagemaker with the python SDK.
+On the 12th of October, 2022, I presented a Knowledge Share to my colleagues at Machine Learning Reply GmBH titled, ["Developing Solutions with Sagemaker"](https://www.slideshare.net/TemiReply/mldevelopmentwithsagemakerpptx). Knowledge Sharing is a tradition we observe weekly at Machine Learning Reply GmBH that helps us as consultants to develop a broad range of skill sets. On the day, there was little time to go deep into understanding the Sagemaker Python SDK. With this follow-up blog post, I would like you to explore the Estimator API, Model API, Preprocessor API and Predictor API with me using the AWS Sagemaker Python SDK.
 
 ## AWS Sagemaker Python SDK
 
-The Amazon SageMaker Python SDK is the recommended library for developing solutions is Sagemaker. The other ways of interacting with Sagemaker are the AWS CLI V2, Boto3 and the AWS web console.
-Although the SDK should offer a faster development experience, I discovered a learning curve exists to hit the ground running with it.
+The Amazon SageMaker Python SDK is the recommended library for developing solutions is Sagemaker. The other ways of interacting with Sagemaker are the AWS CLI, Boto3 and the AWS web console.
+In theory, the SDK should offer the best developer experience, but I discovered a learning curve exists to hit the ground running with it.
 
 This post walks through a simple regression task that showcases the important APIs in the SDK.
 I also highlight "gotchas" encountered while developing this solution. The entire codebase is found [here](https://github.com/Temiloluwa/sagemaker_auto_mpg).
 
 ## Regression Task: Fuel Consumption Prediction
-I selected a regression task I tackled as budding Data scientist ([notebook link](https://github.com/Temiloluwa/ML-database-auto-mpg-prediction/blob/master/solution.ipynb)): to predict fuel consumption in MPG of vehicles ([problem definition](https://archive.ics.uci.edu/ml/datasets/auto+mpg)). The problem is broken down into three stages:
+I selected a regression task I tackled as budding Data scientist ([notebook link](https://github.com/Temiloluwa/ML-database-auto-mpg-prediction/blob/master/solution.ipynb)): to predict fuel consumption of vehicles in MPG ([problem definition](https://archive.ics.uci.edu/ml/datasets/auto+mpg)). I broke down the problem into three stages:
 
 1. A preprocessing stage for feature engineering
 2. A model training and evaluation stage
@@ -23,11 +22,11 @@ Each of these stages produce resuable model artifacts that are stored in S3.
 
 ## Sagemaker Preprocessing and Training
 
-Two things are king in Sagemaker: S3 and Docker containers. S3 is the primary location for storing training data and exporting training artifacts like models. The SDK provides [Preprocessors](https://sagemaker.readthedocs.io/en/stable/amazon_sagemaker_processing.html) and [Estimators](https://sagemaker.readthedocs.io/en/stable/api/training/estimators.html) as the fundamental interfaces for data preprocessing and model training. These two APIs are simply wrappers for Sagemaker Docker containers. This is what happens under the hood when a preprocessing job is created with a Preprocessor or training job with an Estimator:
+Two things are king in Sagemaker: S3 and Docker containers. S3 is the primary location for storing training data and destination for exporting training artifacts like models. The SDK provides [Preprocessors](https://sagemaker.readthedocs.io/en/stable/amazon_sagemaker_processing.html) and [Estimators](https://sagemaker.readthedocs.io/en/stable/api/training/estimators.html) as the fundamental interfaces for data preprocessing and model training. These two APIs are simply wrappers for Sagemaker Docker containers. This is what happens under the hood when a preprocessing job is created with a Preprocessor or training job with an Estimator:
 
-1. Data Transfer from S3 into the Sagemaker Docker container
-2. Job execution, training or preprocessing, in the container
-3. Export of output artifacts (models, preprocessed features) to S3
+1. Data is transfered from S3 into the Sagemaker Docker container
+2. The Job (training or preprocessing) is executed in the container that runs on the compute instance you have specified for the job
+3. Output artifacts (models, preprocessed features) are exported to S3 when the job is concluded
 
 <br>
 <figure>
@@ -36,11 +35,11 @@ Two things are king in Sagemaker: S3 and Docker containers. S3 is the primary lo
 </figure>
 
 ### Sagemaker Containers
-It is very important to get familar with the enviromental variables and pre-configured path locations in Sagemaker containers. More information is found at the Sagemaker Containers' [Github page](https://github.com/aws/sagemaker-containers). For example Preprocessors receive data from S3 into `/opt/ml/preprocessing/input` while Estimators store training data in `/opt/ml/input/data/train`. Important environmental variables include `SM_MODEL_DIR` for exporting models, `SM_NUM_CPUS`, and `SM_HP_{hyperparameter_name}` 
+It is very important to get familar with the enviromental variables and pre-configured path locations in Sagemaker containers. More information is found at the Sagemaker Containers' [Github page](https://github.com/aws/sagemaker-containers). For example Preprocessors, receive data from S3 into `/opt/ml/preprocessing/input` while Estimators store training data in `/opt/ml/input/data/train`. Some environmental variables include `SM_MODEL_DIR` for exporting models, `SM_NUM_CPUS`, and `SM_HP_{hyperparameter_name}`.
 
 ## Preliminary Steps
 
-Development in Sagemaker begins with initializing a Sagemaker session followed by boilerplate steps of getting the region, execution role and default bucket. I create prefixes to key s3 locations for storing data, preprocessed features and model artifacts. 
+Let's start with initializing a Sagemaker session followed by boilerplate steps of getting the region, execution role and default bucket. I create prefixes to key s3 locations for data storage, and the export of preprocessed features and models. 
 
 ``` python
 import os
@@ -89,7 +88,7 @@ def get_s3_path(prefix, bucket=bucket):
 
 ## Raw Data Transfer to S3
 
-This function downloads the raw data, splits it into train, validation and test sets and uploads them to their respective s3 destinations in the default bucket based on the prefixes I defined.
+Next, we have to transfer our raw data to S3. In a production setting, an ETL job sets an S3 bucket as the final data destination. I have implemenented a function that downloads the raw data, splits it into train, validation and test sets then uploads them all to their respective s3 paths in the default bucket based on pre-defined prefixes.
 
 ```python
 
