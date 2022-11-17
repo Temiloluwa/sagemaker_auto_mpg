@@ -279,11 +279,11 @@ class CustomFeaturePreprocessor(BaseEstimator, TransformerMixin):
 ```
 ### Preprocessing Job
 
-The preprocessing script at `scripts/preprocessor/train.py` is executed in the preprocessing container to perform the feature engineering. A [Sklearn Pipeline](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline) model is created with my `CustomFeaturePreprocessor` class as its first step, followed by a `OneHotEncoder` for categorical columns and `StandardScaler` for numerical columns. A Sklearn pipeline is an easy way to chain multiple Sklearn transformers together.
+The preprocessing script at `scripts/preprocessor/train.py` is executed in the preprocessing container to perform the feature engineering. I create a [Sklearn Pipeline](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline) model is using my `CustomFeaturePreprocessor` class as its first step, followed by a `OneHotEncoder` for transforming categorical columns and finally `StandardScaler` for numerical columns. A Sklearn pipeline is an easy way to chain multiple Sklearn transformers together.
 
-As a good ML Engineer you should avoid [data leakage](https://en.wikipedia.org/wiki/Leakage_(machine_learning)) during feature engineering. Since the same transformer will be applied to the validation and test sets, I excluded the first columns of the pandas dataframes because that is the target. I also fitted the model on only the train set.
+As a good ML Engineer, you should avoid [data leakage](https://en.wikipedia.org/wiki/Leakage_(machine_learning)) during feature engineering. Since the same transformer is applied to the train and validation, I excluded the first columns of the pandas dataframes which is the target. I also fitted the model on only the train set.
 
-After the model is saved using joblib, it is imperative that it be compressed into a [`tar`](https://docs.python.org/3/library/tarfile.html) file so that it can successfully be imported during inferencing.
+After the model is saved using joblib, it is imperative that it be compressed into a [`tar`](https://docs.python.org/3/library/tarfile.html) file. Sagemaker models are archived as tarfiles else,  an error will be thrown when importing the model during inferencing.
 
 ``` python
 %%writefile scripts/preprocessor/train.py
@@ -361,7 +361,9 @@ if __name__ == '__main__':
 ```
 
 ## Stage 2: Model Training and Evaluation
-The python libary `smexperiments` is used for Experment tracking in Sagemaker. A Trial in sagemaker is synonymous to an MLFlow run. Depending on the complexity of the solution, a trial could cover multiple ML workflow stages for example model training and evaluation stage or just a single hyperparameter optimization step. What's important is that metrics are logged for each trial run so that they can be compared to one another. I created a trial for just the training step and attributed it to the created experiment using the `experiment_name` parameter in the `Trial.create` call. 
+The different python libary `smexperiments` is used for Experment tracking in Sagemaker. A Trial in Sagemaker is synonymous to an MLFlow run. A trial could consist of multiple ML workflow stages, depending on the complexity of the solution.  For example, model training and evaluation or just a single hyperparameter optimization step could be considered a trial. What's important is that metrics are logged for each trial run to enable the comparison of different trials. 
+
+I created a trial for just the training step and attributed it to the created experiment using the `experiment_name` parameter in the `Trial.create` call. 
 
 ``` python
 
@@ -372,6 +374,7 @@ from smexperiments.tracker import Tracker
 
 current_time = datetime.now().strftime("%d-%b-%Y-%H:%M:%S").replace(":", "-")
 experiment_name = "auto-mg-experiment"
+# create a new experiment a load one if it exists
 try:
     auto_experiment = Experiment.load(experiment_name=experiment_name)
     print(f'experiment {experiment_name} was loaded')
@@ -389,11 +392,14 @@ from sagemaker.sklearn.estimator import SKLearn
 current_time = datetime.now().strftime("%d-%b-%Y-%H:%M:%S").replace(":", "-")
 n_estimators = 10
 trail_name = f"auto-mg-{n_estimators}-estimators"
+# create a trial for the training job
 training_job_trial = Trial.create(trial_name = f"{trail_name}-{current_time}",
                               experiment_name = auto_experiment.experiment_name,
                               sagemaker_boto_client=sm_client,
                               tags = [{'Key': 'Name', 'Value': f"auto-mg-{current_time}"},
                                        {'Key': 'MLEngineer', 'Value': f"Temiloluwa Adeoti"}])
+
+# configure the estimator
 model = SKLearn(
     entry_point="train.py",
     source_dir="./scripts/model",
@@ -415,7 +421,7 @@ model = SKLearn(
     enable_sagemaker_metrics=True
 )
 
-
+# fit the estimator
 model.fit(job_name=f"auto-mpg-{current_time}",
           inputs = {"train": get_s3_path(pp_train_prefix), 
                     "test": get_s3_path(pp_val_prefix)
@@ -428,15 +434,15 @@ model.fit(job_name=f"auto-mpg-{current_time}",
 
 ```
 
-I consider logging metrics a bit complex in Sagemaker in comparision to other frameworks. These are the steps involved in capturing custom training metrics:
+I reckon logging of metrics to be a bit involved in Sagemaker in comparision to other frameworks. This is how custom training metrics are captured:
 
-1. Create a logger that streams to standard output `(logging.StreamHandler(sys.stdout))`. The streamed logs are automatically captured by AWS cloudwatch.
+1. Create a logger that streams to standard output `(logging.StreamHandler(sys.stdout))`. The streamed logs are automatically captured by AWS Cloudwatch.
 2. Log metrics based on your predetermined format e.g metric-name=metric-value.
 3. When creating the estimator that runs the training script, a regex pattern that matches your metric logging format must be given to the `metric_definition` parameter.
 
-The `scripts/model/train.py` is ran in a Sklearn Estimator container. Pay attention to how inputs are supplied to estimators using the `inputs` parameter and how they are assigned to trials using the `experiment_config` parameter. The script trains a `RandomForestRegressor` on the `.npy` preprocessed train features and the model is evaluated on validation features.  
+The training job is executed by running the `scripts/model/train.py` file within in an Sklearn Estimator container on a compute instance (ml.m5.xlarge in this case). Pay attention to how inputs are supplied to estimators using the `inputs` parameter and how the training job is  assigned to the created trial using the `experiment_config` parameter. 
 
-I will explain in what follows why I did not save the model as a tarfile.
+The script trains a `RandomForestRegressor` on the `.npy` preprocessed train features and the model is evaluated on validation features. I will explain in what follows why I did not save the model as a tarfile.
 
 ``` python
 %%writefile scripts/model/train.py
