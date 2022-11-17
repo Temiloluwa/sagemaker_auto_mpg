@@ -37,6 +37,25 @@ Two things are king in Sagemaker: S3 and Docker containers. S3 is the primary lo
 ### Sagemaker Containers
 It is very important to get familar with the enviromental variables and pre-configured path locations in Sagemaker containers. More information is found at the Sagemaker Containers' [Github page](https://github.com/aws/sagemaker-containers). For example Preprocessors, receive data from S3 into `/opt/ml/preprocessing/input` while Estimators store training data in `/opt/ml/input/data/train`. Some environmental variables include `SM_MODEL_DIR` for exporting models, `SM_NUM_CPUS`, and `SM_HP_{hyperparameter_name}`.
 
+## Project Folder Structure
+The diagram below shows the project's folder structure. The main script is the python notebook `auto_mpg_prediction.ipynb` whose cells are executed in Sagemaker Studio. Train are preprocessing scripts are located in the `scripts` folder.
+
+
+``` bash
+├── Blog.md
+├── LICENSE
+├── README.md
+├── auto_mpg_prediction.ipynb
+└── scripts
+    ├── model
+    │   ├── inference.py
+    │   └── train.py
+    └── preprocessor
+        ├── custom_preprocessor.py
+        ├── inference.py
+        └── train.py
+```
+
 ## Preliminary Steps
 
 Let's start with initializing a Sagemaker session followed by boilerplate steps of getting the region, execution role and default bucket. I create prefixes to key s3 locations for data storage, and the export of preprocessed features and models. 
@@ -151,7 +170,7 @@ train_path, val_path, test_path = upload_raw_data_to_s3(sess)
 
 ```
 
-## Feature Engineering
+## Stage 1: Feature Engineering
 All preprocessing scripts are stored in a directory named `scripts/preprocessor`. The preprocessing steps are implemented using Sklearn python library. These are the goals of this step:
 
 1. Preprocess the raw train and validation `.csv` data into features and export them to s3 in `.npy` format
