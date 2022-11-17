@@ -16,7 +16,7 @@ I selected a regression task I tackled as budding Data scientist ([notebook link
 
 1. A preprocessing stage for feature engineering
 2. A model training and evaluation stage
-3. An inference stage
+3. A model inferencing  stage
 
 Each of these stages produce resuable model artifacts that are stored in S3. 
 
@@ -38,7 +38,7 @@ Two things are king in Sagemaker: S3 and Docker containers. S3 is the primary lo
 It is very important to get familar with the enviromental variables and pre-configured path locations in Sagemaker containers. More information is found at the Sagemaker Containers' [Github page](https://github.com/aws/sagemaker-containers). For example Preprocessors, receive data from S3 into `/opt/ml/preprocessing/input` while Estimators store training data in `/opt/ml/input/data/train`. Some environmental variables include `SM_MODEL_DIR` for exporting models, `SM_NUM_CPUS`, and `SM_HP_{hyperparameter_name}`.
 
 ## Project Folder Structure
-The diagram below shows the project's folder structure. The main script is the python notebook `auto_mpg_prediction.ipynb` whose cells are executed in Sagemaker Studio. Train are preprocessing scripts are located in the `scripts` folder.
+The diagram below shows the project's folder structure. The main script is the python notebook `auto_mpg_prediction.ipynb` whose cells are executed in Sagemaker Studio. Training and preprocessing scripts are located in the `scripts` folder.
 
 
 ``` bash
@@ -171,16 +171,16 @@ train_path, val_path, test_path = upload_raw_data_to_s3(sess)
 ```
 
 ## Stage 1: Feature Engineering
-All preprocessing scripts are stored in a directory named `scripts/preprocessor`. The preprocessing steps are implemented using Sklearn python library. These are the goals of this step:
+The preprocessing steps are implemented using the Sklearn python library. These are the goals of this stage:
 
-1. Preprocess the raw train and validation `.csv` data into features and export them to s3 in `.npy` format
-2. Save the trained preprocessing model using `joblib` and export it to s3. This saved model will serve the first stage of the inference pipeline, generating features given input test data.
+1. Preprocess the raw train and validation `.csv` data into features and export them to s3 in [`.npy`](https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html#module-numpy.lib.format) format
+2. Save the preprocessing model using [`joblib`](https://scikit-learn.org/stable/model_persistence.html) and export it to s3. This saved model will be deployed as the first step of our inference pipeline. During inferencing, it's task will be to generating features (.npy) for raw test data.
 
-The Sagemaker Python SDK offers [Sklearn Preprocessors](https://sagemaker.readthedocs.io/en/stable/frameworks/sklearn/sagemaker.sklearn.html#sagemaker.sklearn.processing.SKLearnProcessor) and [PySpark Preprocessors](https://sagemaker.readthedocs.io/en/stable/api/training/processing.html#sagemaker.spark.processing.PySparkProcessor). Unfortunately, I discovered it is not possible to use custom scripts or dependencies with both. I had to use the [Framework Preprocessor](https://sagemaker.readthedocs.io/en/stable/api/training/processing.html#sagemaker.processing.FrameworkProcessor). 
+The Sagemaker Python SDK offers [Sklearn Preprocessors](https://sagemaker.readthedocs.io/en/stable/frameworks/sklearn/sagemaker.sklearn.html#sagemaker.sklearn.processing.SKLearnProcessor) and [PySpark Preprocessors](https://sagemaker.readthedocs.io/en/stable/api/training/processing.html#sagemaker.spark.processing.PySparkProcessor). These are preprocessors that already come with Sklearn and Pyspark pre-installed. Unfortunately, I discovered it is not possible to use custom scripts or dependencies with both. Therefore, I had to use the [Framework Preprocessor](https://sagemaker.readthedocs.io/en/stable/api/training/processing.html#sagemaker.processing.FrameworkProcessor). 
 
-During instantiation, I configured the preprocessor with the `SKlearn estimator` using the `estimator_cls` parameter. The `.run` method of the preprocessor comes with a `code` parameter for specifying the entry point script and  `source_dir` parameter for defining the directory containing custom scripts.
+To instantiate the Framework Preprocessor with the sklearn library,  I supplied [`SKlearn estimator`](https://sagemaker.readthedocs.io/en/stable/frameworks/sklearn/sagemaker.sklearn.html) Class to the `estimator_cls` parameter. The `.run` method of the preprocessor comes with a `code` parameter for specifying the entry point script and  `source_dir` parameter for indicating the directory that contains all custom scripts.
 
-Data is transferred into and exported out of the preprocessing containiner using [ProcessingInput](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_ProcessingInput.html) and [ProcessingOutput](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_ProcessingOutput.html) APIs. Note that unlike Estimators that are executed using a `.fit` method, Preprocessors use a `.run` method.
+Pay close attention to how data is transferred into and exported out of the preprocessing containiner using [ProcessingInput](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_ProcessingInput.html) and [ProcessingOutput](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_ProcessingOutput.html) APIs. Also note that unlike Estimators that are executed using a `.fit` method, Preprocessors use a `.run` method.
 
 ``` python
 
@@ -227,7 +227,7 @@ sklearn_processor.run(
 
 ### Custom Preprocessor
 
-I create a custom preprocessor class that obeys the `.fit` and `.transform` interface by extending `BaseEstimator` and `TransformerMixin`. The preprocessor engineers the `Model Year` Feature into `Age` and makes features `Origin` and `Cylinders` categorical. It is vital that this custom transformer be stored in a separate file and imported by the main preprocessing script. The reason for this will be explained during the training step.
+I wanted to implement some custom preprocessing logic so I created a custom preprocessor class. I configured it to follow the `.fit` and `.transform` that is popular in Sklearn by interface by extending `BaseEstimator` and `TransformerMixin`. The preprocessor engineers the `Model Year` Feature into `Age` and makes features `Origin` and `Cylinders` categorical. It is vital that this custom transformer be stored in a separate file and imported by the main preprocessing script. The reason for this will be explained during the training step.
 
 ``` python 
 %%writefile scripts/preprocessor/custom_preprocessor.py
@@ -277,7 +277,7 @@ class CustomFeaturePreprocessor(BaseEstimator, TransformerMixin):
         x = self.transform(X)
         return x
 ```
-### Preprocessor Train Script
+### Preprocessing Job
 
 The preprocessing script at `scripts/preprocessor/train.py` is executed in the Preprocessing container to perform the feature engineering. A [Sklearn Pipeline](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline) model is created with the `CustomFeaturePreprocessor` as its first step, followed by a `OneHotEncoder` for categorical columns and `StandardScaler` for numerical columns. The first columns of the pandas dataframes are excluded during transformation because they contain the target. 
 
@@ -358,7 +358,7 @@ if __name__ == '__main__':
         tar_handle.add("model.joblib")
 ```
 
-## Model Training
+## Stage 2: Model Training and Evaluation
 The python libary `smexperiments` is used for Experment tracking in Sagemaker. A Trial in sagemaker is synonymous to an MLFlow run. Depending on the complexity of the solution, a trial could cover multiple ML workflow stages for example model training and evaluation stage or just a single hyperparameter optimization step. What's important is that metrics are logged for each trial run so that they can be compared to one another. I created a trial for just the training step and attributed it to the created experiment using the `experiment_name` parameter in the `Trial.create` call. 
 
 ``` python
@@ -526,7 +526,7 @@ if __name__=='__main__':
     
 ```
 
-## Model Inferencing
+## Stage 3: Model Inferencing
 
 We have seen that Preprocessors are for preprocessing and Estimators for training. Sagemaker provides the [Model](https://sagemaker.readthedocs.io/en/stable/api/inference/model.html) api for deployment to an endpoint and the [Predictor](https://sagemaker.readthedocs.io/en/stable/api/inference/predictors.html) api for making predictions with the endpoint.
 
