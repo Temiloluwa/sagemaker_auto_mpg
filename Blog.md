@@ -1,5 +1,11 @@
 # A Practical Introduction to Amazon SageMaker Python SDK
 
+## Introduction
+On the 12th of October, 2022, I presented a Knowledge Share to my colleagues at Machine Learning Reply GmBH titled, "Developing Solutions with Sagemaker". Knowledge Sharing is a tradition we observe weekly at Learning Reply GmBH which helps us as consultants to have a broad range of skill sets. The presentation was an overview on Sagemaker JumpStart, Sagemaker Sagemaker Algorithms, Development Environments in Sagemaker and their underlying architecture.
+This post is follow-up post to dive a bit deeper into interacting with Sagemaker with the python SDK.
+
+## AWS Sagemaker Python SDK
+
 The Amazon SageMaker Python SDK is the recommended library for developing solutions is Sagemaker. The other ways of interacting with Sagemaker are the AWS CLI V2, Boto3 and the AWS web console.
 Although the SDK should offer a faster development experience, I discovered a learning curve exists to hit the ground running with it.
 
@@ -404,7 +410,7 @@ model.fit(job_name=f"auto-mpg-{current_time}",
 
 I consider logging metrics a bit complex in Sagemaker in comparision to other frameworks. These are the steps involved in capturing custom training metrics:
 
-1. Create a logger that streams to standard output `(logging.StreamHandler(sys.stdout))`. The stream logs are automatically captured by AWS cloudwatch.
+1. Create a logger that streams to standard output `(logging.StreamHandler(sys.stdout))`. The streamed logs are automatically captured by AWS cloudwatch.
 2. Log metrics based on your predetermined format e.g metric-name=metric-value.
 3. When creating the estimator that runs the training script, a regex pattern that matches your metric logging format must be given to the `metric_definition` parameter.
 
@@ -504,7 +510,7 @@ if __name__=='__main__':
 
 ## Model Inferencing
 
-We have seen that Preprocessors for preprocessing and Estimators are for training. Sagemaker provides the [`Model`](https://sagemaker.readthedocs.io/en/stable/api/inference/model.html) api for deployment to an endpoint and the [Predictor](https://sagemaker.readthedocs.io/en/stable/api/inference/predictors.html) api for making predictions with the endpoint.
+We have seen that Preprocessors are for preprocessing and Estimators for training. Sagemaker provides the [Model](https://sagemaker.readthedocs.io/en/stable/api/inference/model.html) api for deployment to an endpoint and the [Predictor](https://sagemaker.readthedocs.io/en/stable/api/inference/predictors.html) api for making predictions with the endpoint.
 
 Since we have two models, preprocessor and regressor models, we require a pipeline model to chain both and make a deployment. I created a `SKLearnModel` for the preprocessor and supplied as arguments the path to the saved tar model in S3, the inference script as the entry point and the custom_preprocessor.py as the dependency.
 
