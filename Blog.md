@@ -180,7 +180,7 @@ The Sagemaker Python SDK offers [Sklearn Preprocessors](https://sagemaker.readth
 
 To instantiate the Framework Preprocessor with the sklearn library,  I supplied [`SKlearn estimator`](https://sagemaker.readthedocs.io/en/stable/frameworks/sklearn/sagemaker.sklearn.html) Class to the `estimator_cls` parameter. The `.run` method of the preprocessor comes with a `code` parameter for specifying the entry point script and  `source_dir` parameter for indicating the directory that contains all custom scripts.
 
-Pay close attention to how data is transferred into and exported out of the preprocessing containiner using [ProcessingInput](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_ProcessingInput.html) and [ProcessingOutput](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_ProcessingOutput.html) APIs. Also note that unlike Estimators that are executed using a `.fit` method, Preprocessors use a `.run` method.
+Pay close attention to how data is transferred into and exported out of the preprocessing containiner using [ProcessingInput](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_ProcessingInput.html) and [ProcessingOutput](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_ProcessingOutput.html) APIs. You will see how container (`/opt/ml/*`) and S3 paths for data transfer are specified. Note that unlike Estimators that are executed using a `.fit` method, Preprocessors use a `.run` method.
 
 ``` python
 
@@ -227,7 +227,7 @@ sklearn_processor.run(
 
 ### Custom Preprocessor
 
-I wanted to implement some custom preprocessing logic so I created a custom preprocessor class. I configured it to follow the `.fit` and `.transform` that is popular in Sklearn by interface by extending `BaseEstimator` and `TransformerMixin`. The preprocessor engineers the `Model Year` Feature into `Age` and makes features `Origin` and `Cylinders` categorical. It is vital that this custom transformer be stored in a separate file and imported by the main preprocessing script. The reason for this will be explained during the training step.
+I wanted to implement some custom preprocessing logic so I created a custom preprocessor class and  configured it to follow the popular Sklearn `.fit` and `.transform` interfaces by extending `BaseEstimator` and `TransformerMixin`. The preprocessor engineers the `Model Year` Feature into `Age` and makes features `Origin` and `Cylinders` categorical. It is vital that this custom transformer be stored in a separate file and imported by the main preprocessing script. The reason for this will be explained during the inferencing step.
 
 ``` python 
 %%writefile scripts/preprocessor/custom_preprocessor.py
@@ -279,9 +279,11 @@ class CustomFeaturePreprocessor(BaseEstimator, TransformerMixin):
 ```
 ### Preprocessing Job
 
-The preprocessing script at `scripts/preprocessor/train.py` is executed in the Preprocessing container to perform the feature engineering. A [Sklearn Pipeline](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline) model is created with the `CustomFeaturePreprocessor` as its first step, followed by a `OneHotEncoder` for categorical columns and `StandardScaler` for numerical columns. The first columns of the pandas dataframes are excluded during transformation because they contain the target. 
+The preprocessing script at `scripts/preprocessor/train.py` is executed in the preprocessing container to perform the feature engineering. A [Sklearn Pipeline](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline) model is created with my `CustomFeaturePreprocessor` class as its first step, followed by a `OneHotEncoder` for categorical columns and `StandardScaler` for numerical columns. A Sklearn pipeline is an easy way to chain multiple Sklearn transformers together.
 
-After the model is saved using joblib, it is imperative that it be compressed into a `tar` file so that it can successfully be imported during inferencing.
+As a good ML Engineer you should avoid [data leakage](https://en.wikipedia.org/wiki/Leakage_(machine_learning)) during feature engineering. Since the same transformer will be applied to the validation and test sets, I excluded the first columns of the pandas dataframes because that is the target. I also fitted the model on only the train set.
+
+After the model is saved using joblib, it is imperative that it be compressed into a [`tar`](https://docs.python.org/3/library/tarfile.html) file so that it can successfully be imported during inferencing.
 
 ``` python
 %%writefile scripts/preprocessor/train.py
