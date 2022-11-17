@@ -585,3 +585,57 @@ predictor = inference_pipeline.deploy(initial_instance_count=1,
 ```
 
 ### Sagemaker Inference Script Structure
+
+In Sagemaker, the model server requires four functions to successfully deploy a model.
+
+1. The `model_fn`  loads the model file e.g `.joblib`. 
+2. The `input_fn` for parses the input request to model. Data deserialization and transformation can occur to prepare the request for the model.
+3. The `predict_fn` makes the actual prediction with the model e.g calls `model.predict`.
+4. The `output_fn` processes the response and delivers it in the desired format to the caller.
+
+Our Scikit-learn model server already has default implementations of these functions which can be overriden in our inference script.
+
+#### Preprocessor Inference Script
+
+In my inference script for the preprocessor, I imported the custom dependencies. The `model_fn` loads the `.joblib` model, while the `input_fn` ensures the request is in `text` or `csv` format and transforms the data into a `Pandas dataframe`. By default, the `predict_fn` should make a `.predict` call on the model, but since the preprocessor is a transform, the `.transform` method is used. 
+
+``` python
+%%writefile scripts/preprocessor/inference.py
+import os
+import joblib
+import argparse
+import pandas as pd
+from io import StringIO
+# import the custom dependencies
+from custom_preprocessor import original_features, CustomFeaturePreprocessor
+
+def input_fn(input_data, content_type):
+    """ Preprocess input data """
+    if content_type == 'text/csv':
+        df = pd.read_csv(StringIO(input_data), header=None)
+
+        if len(df.columns) == len(original_features) + 1:
+            df = df.iloc[:, 1:]
+            
+        if list(df.columns) != original_features:
+            df.columns = original_features
+            
+        return df
+    else:
+        raise ValueError(f"Unsupported content type: {type(content_type)}")
+        
+
+def predict_fn(input_data, model):
+    """ Call the transform method instead of the default predict method"""
+    predictions = model.transform(input_data)
+    return predictions
+
+
+def model_fn(model_dir):
+    """Load the model"""
+    model_path = os.path.join(model_dir, "model.joblib")
+    loaded_model = joblib.load(model_path)
+    return loaded_model
+```
+
+#### Regressor Inference Script
