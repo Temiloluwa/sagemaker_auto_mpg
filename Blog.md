@@ -1,7 +1,7 @@
 # A Practical Introduction to Amazon SageMaker Python SDK
 
 ## Introduction
-On the 12th of October, 2022, I presented a Knowledge Share to my colleagues at Machine Learning Reply GmBH titled, ["Developing Solutions with Sagemaker"](https://www.slideshare.net/TemiReply/mldevelopmentwithsagemakerpptx). Knowledge Sharing is a tradition we observe weekly at Machine Learning Reply GmBH that helps us as consultants to develop a broad range of skill sets. On the day, there was little time to go deep into understanding the Sagemaker Python SDK. With this follow-up blog post, I would like you to explore the Estimator API, Model API, Preprocessor API and Predictor API with me using the AWS Sagemaker Python SDK.
+On the 12th of October, 2022, I presented a Knowledge Share to my colleagues at [Machine Learning Reply GmBH](https://www.reply.com/machine-learning-reply/de/) titled, ["Developing Solutions with Sagemaker"](https://www.slideshare.net/TemiReply/mldevelopmentwithsagemakerpptx). Knowledge Sharing is a tradition we observe weekly at [Machine Learning Reply GmBH](https://www.reply.com/machine-learning-reply/de/) that helps us as consultants to develop a broad range of skill sets. On the day, there was little time to go delve into the Sagemaker Python SDK. There was little time to go delve into the Sagemaker Python SDK on the day. With this follow-up blog post, I would like to explore the Estimator API, Model API, Preprocessor API, and Predictor API  using the AWS Sagemaker Python SDK.
 
 ## AWS Sagemaker Python SDK
 
@@ -12,19 +12,19 @@ This post walks through a simple regression task that showcases the important AP
 I also highlight "gotchas" encountered while developing this solution. The entire codebase is found [here](https://github.com/Temiloluwa/sagemaker_auto_mpg).
 
 ## Regression Task: Fuel Consumption Prediction
-I selected a regression task I tackled as budding Data scientist ([notebook link](https://github.com/Temiloluwa/ML-database-auto-mpg-prediction/blob/master/solution.ipynb)): to predict fuel consumption of vehicles in MPG ([problem definition](https://archive.ics.uci.edu/ml/datasets/auto+mpg)). I broke down the problem into three stages:
+I selected a regression task I tackled as a budding Data scientist  ([notebook link](https://github.com/Temiloluwa/ML-database-auto-mpg-prediction/blob/master/solution.ipynb)): to predict fuel consumption of vehicles in MPG ([problem definition](https://archive.ics.uci.edu/ml/datasets/auto+mpg)). I broke down the problem into three stages:
 
 1. A preprocessing stage for feature engineering
 2. A model training and evaluation stage
 3. A model inferencing  stage
 
-Each of these stages produce resuable model artifacts that are stored in S3. 
+Each of these stages produces reusable model artifacts that are stored in S 
 
 ## Sagemaker Preprocessing and Training
 
-Two things are king in Sagemaker: S3 and Docker containers. S3 is the primary location for storing training data and destination for exporting training artifacts like models. The SDK provides [Preprocessors](https://sagemaker.readthedocs.io/en/stable/amazon_sagemaker_processing.html) and [Estimators](https://sagemaker.readthedocs.io/en/stable/api/training/estimators.html) as the fundamental interfaces for data preprocessing and model training. These two APIs are simply wrappers for Sagemaker Docker containers. This is what happens under the hood when a preprocessing job is created with a Preprocessor or training job with an Estimator:
+Two things are king in Sagemaker: S3 and Docker containers. S3 is the primary location for storing training data and the destination for exporting training artifacts like models. The SDK provides [Preprocessors](https://sagemaker.readthedocs.io/en/stable/amazon_sagemaker_processing.html) and [Estimators](https://sagemaker.readthedocs.io/en/stable/api/training/estimators.html) as the fundamental interfaces for data preprocessing and model training. These two APIs are simply wrappers for Sagemaker Docker containers. This is what happens under the hood when a preprocessing job is created with a Preprocessor or training job with an Estimator:
 
-1. Data is transfered from S3 into the Sagemaker Docker container
+1. Data is transferred from S3 into the Sagemaker Docker container
 2. The Job (training or preprocessing) is executed in the container that runs on the compute instance you have specified for the job
 3. Output artifacts (models, preprocessed features) are exported to S3 when the job is concluded
 
@@ -35,7 +35,7 @@ Two things are king in Sagemaker: S3 and Docker containers. S3 is the primary lo
 </figure>
 
 ### Sagemaker Containers
-It is very important to get familar with the enviromental variables and pre-configured path locations in Sagemaker containers. More information is found at the Sagemaker Containers' [Github page](https://github.com/aws/sagemaker-containers). For example Preprocessors, receive data from S3 into `/opt/ml/preprocessing/input` while Estimators store training data in `/opt/ml/input/data/train`. Some environmental variables include `SM_MODEL_DIR` for exporting models, `SM_NUM_CPUS`, and `SM_HP_{hyperparameter_name}`.
+It is very important to get familiar with the environmental variables and pre-configured path locations in Sagemaker containers. More information is found on the Sagemaker Containers' [Github page](https://github.com/aws/sagemaker-containers). For example, Preprocessors, receive data from S3 into `/opt/ml/preprocessing/input` while Estimators store training data in `/opt/ml/input/data/train`. Some environmental variables include `SM_MODEL_DIR` for exporting models, `SM_NUM_CPUS`, and `SM_HP_{hyperparameter_name}`.
 
 ## Project Folder Structure
 The diagram below shows the project's folder structure. The main script is the python notebook `auto_mpg_prediction.ipynb` whose cells are executed in Sagemaker Studio. Training and preprocessing scripts are located in the `scripts` folder.
@@ -58,7 +58,7 @@ The diagram below shows the project's folder structure. The main script is the p
 
 ## Preliminary Steps
 
-Let's start with initializing a Sagemaker session followed by boilerplate steps of getting the region, execution role and default bucket. I create prefixes to key s3 locations for data storage, and the export of preprocessed features and models. 
+Let's start with initializing a Sagemaker session followed by boilerplate steps of getting the region, execution role, and default bucket. I create prefixes to key s3 locations for data storage, and the export of preprocessed features and models. 
 
 ``` python
 import os
@@ -107,7 +107,7 @@ def get_s3_path(prefix, bucket=bucket):
 
 ## Raw Data Transfer to S3
 
-Next, we have to transfer our raw data to S3. In a production setting, an ETL job sets an S3 bucket as the final data destination. I have implemenented a function that downloads the raw data, splits it into train, validation and test sets then uploads them all to their respective s3 paths in the default bucket based on pre-defined prefixes.
+Next, we have to transfer our raw data to S3. In a production setting, an ETL job sets an S3 bucket as the final data destination. I have implemented a function that downloads the raw data, splits it into the train, validation, and test sets then uploads them all to their respective s3 paths in the default bucket based on pre-defined prefixes.
 
 ```python
 
@@ -117,7 +117,7 @@ def upload_raw_data_to_s3(sess,
                           raw_test_prefix=raw_test_prefix, 
                           split=0.8):
     """
-    Read MPG dataset, peform train test split, then upload to s3
+    Read MPG dataset, perform train test split, then upload to s3
     """
     # filenames
     train_fn = "train.csv"
@@ -174,13 +174,13 @@ train_path, val_path, test_path = upload_raw_data_to_s3(sess)
 The preprocessing steps are implemented using the Sklearn python library. These are the goals of this stage:
 
 1. Preprocess the raw train and validation `.csv` data into features and export them to s3 in [`.npy`](https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html#module-numpy.lib.format) format
-2. Save the preprocessing model using [`joblib`](https://scikit-learn.org/stable/model_persistence.html) and export it to s3. This saved model will be deployed as the first step of our inference pipeline. During inferencing, it's task will be to generating features (.npy) for raw test data.
+2. Save the preprocessing model using [`joblib`](https://scikit-learn.org/stable/model_persistence.html) and export it to s3. This saved model will be deployed as the first step of our inference pipeline.  During inferencing, its task will be to generate features (.npy) for raw test data.
 
 The Sagemaker Python SDK offers [Sklearn Preprocessors](https://sagemaker.readthedocs.io/en/stable/frameworks/sklearn/sagemaker.sklearn.html#sagemaker.sklearn.processing.SKLearnProcessor) and [PySpark Preprocessors](https://sagemaker.readthedocs.io/en/stable/api/training/processing.html#sagemaker.spark.processing.PySparkProcessor). These are preprocessors that already come with Sklearn and Pyspark pre-installed. Unfortunately, I discovered it is not possible to use custom scripts or dependencies with both. Therefore, I had to use the [Framework Preprocessor](https://sagemaker.readthedocs.io/en/stable/api/training/processing.html#sagemaker.processing.FrameworkProcessor). 
 
-To instantiate the Framework Preprocessor with the sklearn library,  I supplied [`SKlearn estimator`](https://sagemaker.readthedocs.io/en/stable/frameworks/sklearn/sagemaker.sklearn.html) Class to the `estimator_cls` parameter. The `.run` method of the preprocessor comes with a `code` parameter for specifying the entry point script and  `source_dir` parameter for indicating the directory that contains all custom scripts.
+To instantiate the Framework Preprocessor with the Sklearn library,  I supplied [`SKlearn estimator`](https://sagemaker.readthedocs.io/en/stable/frameworks/sklearn/sagemaker.sklearn.html) Class to the `estimator_cls` parameter. The `.run` method of the preprocessor comes with a `code` parameter for specifying the entry point script and  `source_dir` parameter for indicating the directory that contains all custom scripts.
 
-Pay close attention to how data is transferred into and exported out of the preprocessing containiner using [ProcessingInput](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_ProcessingInput.html) and [ProcessingOutput](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_ProcessingOutput.html) APIs. You will see how container (`/opt/ml/*`) and S3 paths for data transfer are specified. Note that unlike Estimators that are executed using a `.fit` method, Preprocessors use a `.run` method.
+Pay close attention to how data is transferred into and exported out of the preprocessing container using [ProcessingInput](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_ProcessingInput.html) and [ProcessingOutput](https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_ProcessingOutput.html) APIs. You will see how container (`/opt/ml/*`) and S3 paths for data transfer are specified. Note that unlike Estimators that are executed using a `.fit` method, Preprocessors use a `.run` method.
 
 ``` python
 
