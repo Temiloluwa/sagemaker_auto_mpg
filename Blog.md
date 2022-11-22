@@ -5,7 +5,7 @@ On the 12th of October, 2022, I presented a Knowledge Share to my colleagues at 
 
 ## AWS Sagemaker Python SDK
 
-The Amazon SageMaker Python SDK is the recommended library for developing solutions is Sagemaker. The other ways of interacting with Sagemaker are the AWS CLI, Boto3 and the AWS web console.
+The Amazon SageMaker Python SDK is the recommended library for developing solutions is Sagemaker. The other ways of interacting with Sagemaker are the AWS CLI, Boto3, and the AWS web console.
 In theory, the SDK should offer the best developer experience, but I discovered a learning curve exists to hit the ground running with it.
 
 This post walks through a simple regression task that showcases the important APIs in the SDK.
@@ -16,7 +16,7 @@ I selected a regression task I tackled as a budding Data scientist  ([notebook l
 
 1. A preprocessing stage for feature engineering
 2. A model training and evaluation stage
-3. A model inferencing  stage
+3. A model inferencing stage
 
 Each of these stages produces reusable model artifacts that are stored in S 
 
@@ -35,7 +35,7 @@ Two things are king in Sagemaker: S3 and Docker containers. S3 is the primary lo
 </figure>
 
 ### Sagemaker Containers
-It is very important to get familiar with the environmental variables and pre-configured path locations in Sagemaker containers. More information is found on the Sagemaker Containers' [Github page](https://github.com/aws/sagemaker-containers). For example, Preprocessors, receive data from S3 into `/opt/ml/preprocessing/input` while Estimators store training data in `/opt/ml/input/data/train`. Some environmental variables include `SM_MODEL_DIR` for exporting models, `SM_NUM_CPUS`, and `SM_HP_{hyperparameter_name}`.
+It is crucial to get familiar with the environmental variables and pre-configured path locations in Sagemaker containers. More information is found on the Sagemaker Containers' [Github page](https://github.com/aws/sagemaker-containers). For example, Preprocessors, receive data from S3 into `/opt/ml/preprocessing/input` while Estimators store training data in `/opt/ml/input/data/train`. Some environmental variables include `SM_MODEL_DIR` for exporting models, `SM_NUM_CPUS`, and `SM_HP_{hyperparameter_name}`.
 
 ## Project Folder Structure
 The diagram below shows the project's folder structure. The main script is the python notebook `auto_mpg_prediction.ipynb` whose cells are executed in Sagemaker Studio. Training and preprocessing scripts are located in the `scripts` folder.
@@ -279,11 +279,11 @@ class CustomFeaturePreprocessor(BaseEstimator, TransformerMixin):
 ```
 ### Preprocessing Job
 
-The preprocessing script at `scripts/preprocessor/train.py` is executed in the preprocessing container to perform the feature engineering. I create a [Sklearn Pipeline](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline) model is using my `CustomFeaturePreprocessor` class as its first step, followed by a `OneHotEncoder` for transforming categorical columns and finally `StandardScaler` for numerical columns. A Sklearn pipeline is an easy way to chain multiple Sklearn transformers together.
+The preprocessing script at `scripts/preprocessor/train.py` is executed in the preprocessing container to perform the feature engineering. I create a [Sklearn Pipeline](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline) model using my `CustomFeaturePreprocessor` class as its first step, followed by a `OneHotEncoder` for transforming categorical columns and finally `StandardScaler` for numerical columns. A Sklearn pipeline is an easy way to chain multiple Sklearn transformers together.
 
-As a good ML Engineer, you should avoid [data leakage](https://en.wikipedia.org/wiki/Leakage_(machine_learning)) during feature engineering. Since the same transformer is applied to the train and validation, I excluded the first columns of the pandas dataframes which is the target. I also fitted the model on only the train set.
+You should avoid [data leakage](https://en.wikipedia.org/wiki/Leakage_(machine_learning)) during feature engineering as a good ML Engineer. Since the same transformer is applied to the train and validation, I excluded the first columns of the pandas dataframes which is the target. I also fitted the model on only the train set.
 
-After the model is saved using joblib, it is imperative that it be compressed into a [`tar`](https://docs.python.org/3/library/tarfile.html) file. Sagemaker models are archived as tarfiles else,  an error will be thrown when importing the model during inferencing.
+After the model is saved using `joblib`, it is imperative that it be compressed into a [`tar`](https://docs.python.org/3/library/tarfile.html) file. Sagemaker models are archived as tarfiles else,  an error will be thrown when importing the model during inferencing.
 
 ``` python
 %%writefile scripts/preprocessor/train.py
@@ -361,7 +361,7 @@ if __name__ == '__main__':
 ```
 
 ## Stage 2: Model Training and Evaluation
-The different python libary `smexperiments` is used for Experment tracking in Sagemaker. A Trial in Sagemaker is synonymous to an MLFlow run. A trial could consist of multiple ML workflow stages, depending on the complexity of the solution.  For example, model training and evaluation or just a single hyperparameter optimization step could be considered a trial. What's important is that metrics are logged for each trial run to enable the comparison of different trials. 
+The different python library `smexperiments` is used for Experiment tracking in Sagemaker. A Trial in Sagemaker is synonymous with an MLFlow run. A trial could consist of multiple ML workflow stages, depending on the complexity of the solution.  For example, model training and evaluation or just a single hyperparameter optimization step could be considered a trial. What's important is that metrics are logged for each trial run to enable the comparison of different trials. 
 
 I created a trial for just the training step and attributed it to the created experiment using the `experiment_name` parameter in the `Trial.create` call. 
 
@@ -434,13 +434,13 @@ model.fit(job_name=f"auto-mpg-{current_time}",
 
 ```
 
-I reckon logging of metrics to be a bit involved in Sagemaker in comparision to other frameworks. This is how custom training metrics are captured:
+I reckon logging of metrics to be a bit involved in Sagemaker in comparison to other frameworks. This is how custom training metrics are captured:
 
 1. Create a logger that streams to standard output `(logging.StreamHandler(sys.stdout))`. The streamed logs are automatically captured by AWS Cloudwatch.
 2. Log metrics based on your predetermined format e.g metric-name=metric-value.
 3. When creating the estimator that runs the training script, a regex pattern that matches your metric logging format must be given to the `metric_definition` parameter.
 
-The training job is executed by running the `scripts/model/train.py` file within in an Sklearn Estimator container on a compute instance (ml.m5.xlarge in this case). Pay attention to how inputs are supplied to estimators using the `inputs` parameter and how the training job is  assigned to the created trial using the `experiment_config` parameter. 
+The training job is executed by running the `scripts/model/train.py` file within an Sklearn Estimator container on a compute instance (ml.m5.xlarge in this case). Pay attention to how inputs are supplied to estimators using the `inputs` parameter and how the training job is assigned to the created trial using the `experiment_config` parameter. 
 
 The script trains a `RandomForestRegressor` on the `.npy` preprocessed train features and the model is evaluated on validation features. I will explain in what follows why I did not save the model as a tarfile.
 
@@ -538,9 +538,9 @@ if __name__=='__main__':
 
 Sagemaker provides the [Model](https://sagemaker.readthedocs.io/en/stable/api/inference/model.html) API for model deployement to an endpoint and the [Predictor](https://sagemaker.readthedocs.io/en/stable/api/inference/predictors.html) API for making predictions with the endpoint. Since we have two models, the preprocessor and regressor models, we require a Sagemaker pipeline model to chain both and make a deployment. 
 
-I selected the `SKLearnModel` (Model with Sklearn dependencies pre-installed) for the preprocessor. To prepare the Model, I supplied as arguments paths to the saved tar model in S3, the inference script which is its entry point and the `custom_preprocessor.py`.
+I selected the `SKLearnModel` (Model with Sklearn dependencies pre-installed) for the preprocessor. To prepare the Model, I supplied to it paths to the saved tar model in S3, the inference script which is its entry point, and the `custom_preprocessor.py`.
 
-Repeating the `CustomFeaturePreprocessor` in both the preprocessor model training (`scripts/preprocessor/train.py`) and inference (`scripts/preprocessor/inference.py`) scripts did not work. I needed to import the class from a seperate file (`scripts/preprocessor/custom_preprocessor.py.py`) for inferencing.  This was the error I encountered:
+Repeating the `CustomFeaturePreprocessor` in both the preprocessor model training (`scripts/preprocessor/train.py`) and inference (`scripts/preprocessor/inference.py`) scripts did not work. I needed to import the class from a separate file (`scripts/preprocessor/custom_preprocessor.py.py`) for inferencing.  This was the error I encountered:
 <code>Can't get attribute 'CustomFeaturePreprocessor' on <module '__main__' from '/miniconda3/bin/gunicorn'> </code>. It is a common problem faced during model deployment. You can read more on this type of problem at this [Stackoverflow post](https://stackoverflow.com/questions/49621169/joblib-load-main-attributeerror)
 
 I did not save the regressor as a tarfile because I chose not to import the regressor model from S3. Instead, I created a Sagemaker Model directly from the trained Estimator with the `.create_model` method (another way to create Models).
@@ -593,11 +593,11 @@ predictor = inference_pipeline.deploy(initial_instance_count=1,
 In Sagemaker, the model server requires four functions to successfully deploy a model.
 
 1. The `model_fn`  loads the model file e.g `.joblib`. 
-2. The `input_fn` for parses the input request to model. Data deserialization and transformation can occur to prepare the request for the model.
+2. The `input_fn` for parsing the input request to the model. Data deserialization and transformation can occur to prepare the request for the model.
 3. The `predict_fn` makes the actual prediction with the model e.g calls `model.predict`.
 4. The `output_fn` processes the response and delivers it in the desired format to the caller.
 
-Our Scikit-learn model server already has default implementations of these functions which can be overriden in our inference script.
+Our Scikit-learn model server already has default implementations of these functions which can be overridden in our inference script.
 
 #### Preprocessor Inference Script
 
@@ -684,7 +684,7 @@ def output_fn(prediction, accept):
 
 All the major work is done and making predictions is a very simple process with the [`Predictor API`](https://sagemaker.readthedocs.io/en/stable/api/inference/predictors.html). 
 
-In the code snippet below, I download raw test set from S3 and store each line of the csv,expect the header, as a string in the list called `test_data`. After instantiating the `Predictor` with the `endpoint name` and `sagemaker session`, I make predictions by calling the  `.predict` method on the `predictor` instance.
+In the code snippet below, I download the raw test set from S3 and store each line of the csv, except the header, as a string in the list called `test_data`. After instantiating the `Predictor` with the `endpoint name` and `sagemaker session`, I make predictions by calling the  `.predict` method on the `predictor` instance.
 ``` python
 from pprint import pprint
 
