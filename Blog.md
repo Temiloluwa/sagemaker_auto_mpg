@@ -1,4 +1,7 @@
 # A Practical Introduction to Amazon SageMaker Python SDK
+<figure>
+  <img src="SagemakerPythonSDK.png" alt="Sagemaker Preprocessing Container">
+ </figure>
 
 ## Introduction
 On the 12th of October, 2022, I presented a Knowledge Share to my colleagues at [Machine Learning Reply GmBH](https://www.reply.com/machine-learning-reply/de/) titled, ["Developing Solutions with Sagemaker"](https://www.slideshare.net/TemiReply/mldevelopmentwithsagemakerpptx). Knowledge Sharing is a tradition we observe weekly at [Machine Learning Reply GmBH](https://www.reply.com/machine-learning-reply/de/) that helps us as consultants to develop a broad range of skill sets. There was little time to go delve into the Sagemaker Python SDK on the day. With this follow-up blog post, I would like to explore the Estimator API, Model API, Preprocessor API, and Predictor API  using the AWS Sagemaker Python SDK.
