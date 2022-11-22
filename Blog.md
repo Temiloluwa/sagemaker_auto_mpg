@@ -706,3 +706,8 @@ response = predictor.predict(test_data[:num_of_samples])
 ```
 
 ## Conclusion
+In this post, we have explored the Estimator API, Model API, Preprocessor API, and Predictor API using the AWS Sagemaker Python SDK by training and deploying a regression model. These are the fundamental APIs that are required for developing solutions in Sagemaker.
+
+Sagemaker comes with over 20 features that cover most of the ML life cycle from data annotation and preprocessing to model deployment. A full feature list is found here. Some of these features like we saw with Sagemaker Experiments have separate python libraries. This could make Sagemaker challenging to learn. From my experience, I have found it helpful to study Sagemaker examples when working with unfamiliar Sagemaker features. 
+
+Since most Sagemaker jobs run within a docker container, it's vital to have logging activated to debug errors. Logs streamed to standard output and default Sagemaker metrics are captured by Cloudwatch. I guarantee that this would save you a lot of pain when working with Sagemaker.
